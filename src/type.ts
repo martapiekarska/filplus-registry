@@ -99,7 +99,112 @@ export interface LDNActorsResponse {
 
 export enum LDNActorType {
   Verifier = "verifier"
-  Notary = 'Notary',
+}
+
+export interface CountMetrics {
+  date: string;
+  count: number;
+}
+
+export interface HealthcheckMetrics {
+  ssaBot: boolean;
+  dmobApi: boolean;
+}
+
+export interface BlockchainMetrics {
+  successfulProposals: Array<CountMetrics>;
+  failedProposals: Array<CountMetrics>;
+  successfulApprovals: Array<CountMetrics>;
+  failedApprovals: Array<CountMetrics>;
+}
+
+export interface UserMetrics {
+  githubLogins: Array<CountMetrics>
+  ledgerLogins: Array<CountMetrics>
+  githubTokenLoads: Array<CountMetrics>
+}
+
+export interface ClientMetrics {
+  newClients: Array<CountMetrics>
+}
+
+export interface ApplicationMetrics {
+  applicationsCreated: Array<CountMetrics>;
+  applicationsDeclaredStale: Array<CountMetrics>;
+  applicationsWithOneGrantedAllocation: Array<CountMetrics>;
+  applicationsTotalDatacapReached: Array<CountMetrics>;
+  applicationsAdditionalTotalDatacap: Array<CountMetrics>;
+}
+
+export interface DatacapMetrics {
+  requestedDatacap: Array<CountMetrics>,
+  grantedDatacap: Array<CountMetrics>,
+  refilledDatacap: Array<CountMetrics>,
+  refillsGranted: Array<CountMetrics>,
+  datacapUsed: Array<CountMetrics>,
+}
+
+export type ChartDataResponse = Record<string, Record<string, number>>;
+
+export interface BarData {
+  date: string;
+  count: number;
+}
+
+export enum ChartKey {
+  Healthcheck = "healthcheck",
+  GithubLogins = "githubLogins",
+  GithubTokenLoads = "githubTokenLoads",
+  LedgerLogins = "ledgerLogins",
+  SuccessfulProposals = "successfulProposals",
+  SuccessfulApprovals = "successfulApprovals",
+  FailedProposals = "failedProposals",
+  FailedApprovals = "failedApprovals",
+  NewClients = "newClients",
+  ApplicationsCreated = "applicationsCreated",
+  ApplicationsDeclaredStale = "applicationsDeclaredStale",
+  ApplicationsWithOneGrantedAllocation = "applicationsWithOneGrantedAllocation",
+  ApplicationsAdditionalTotalDatacap = "applicationsAdditionalTotalDatacap",
+  ApplicationsTotalDatacapReached = "applicationsTotalDatacapReached",
+  RequestedDatacap = "requestedDatacap",
+  RefilledDatacap = "refilledDatacap",
+  GrantedDatacap = "grantedDatacap",
+  RefillsGranted = "refillsGranted",
+  DatacapUsed = "datacapUsed",
+}
+
+export interface GraphData {
+  title: ChartKey;
+  data: Array<CountMetrics>
+  isAmount: boolean;
+}
+
+export enum ServiceStatus {
+  Online = "online",
+  Offline = "offline",
+  Checking = "checking"
+}
+
+export interface ServiceStatusProps {
+  name: string;
+  status: ServiceStatus;
+}
+
+export type Validator = (data: Response) => Promise<boolean>;
+
+export interface CheckServiceStatusOptions {
+  apiKey?: string;
+  method?: string;
+  body?: any;
+}
+
+export enum MetricsCategory {
+  Healthcheck = "healthcheck",
+  User = "user",
+  Applications = "applications",
+  Clients = "clients",
+  Blockchain = "blockchain",
+  Datacap = "datacap",
 }
 
 export interface Allocator {

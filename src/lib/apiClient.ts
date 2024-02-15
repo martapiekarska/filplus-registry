@@ -1,4 +1,4 @@
-import { type LDNActorsResponse, type Application, UserMetrics, ApplicationMetrics, DatacapMetrics, HealthcheckMetrics, Allocator } from '@/type'
+import { type LDNActorsResponse, type Application, BlockchainMetrics, UserMetrics, ApplicationMetrics, DatacapMetrics, HealthcheckMetrics, Allocator } from '@/type'
 import axios from 'axios'
 import { getCurrentDate } from './utils'
 
@@ -196,6 +196,29 @@ export const fetchLDNActors = async (): Promise<
     console.error(e)
   }
 }
+
+/**
+ * Retrieves metrics (statistics) based on category of metrics.
+ *
+ * @returns A promise that resolves with a JSON containing all metrics of sent category.
+ */
+export const getMetrics = async (category: string): Promise<
+  HealthcheckMetrics
+  | UserMetrics 
+  | BlockchainMetrics 
+  | ApplicationMetrics 
+  | DatacapMetrics
+> => {
+  try {
+    const { data } = await apiClient.get(`metrics/${category}`)
+
+    return data
+  } catch (e) {
+    console.error(e)
+    throw e
+  }
+}
+
 /**
  * Retrieves all allocators using the Fil+ infrastructure.
  *
