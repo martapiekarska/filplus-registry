@@ -273,6 +273,7 @@ export const fetchLDNActors = async (): Promise<
     console.error(e)
   }
 }
+
 /**
  * Retrieves all allocators using the Fil+ infrastructure.
  *
@@ -281,6 +282,56 @@ export const fetchLDNActors = async (): Promise<
 export const getAllocators = async (): Promise<Allocator[]> => {
   try {
     const { data } = await apiClient.get(`allocators`)
+
+    return data
+  } catch (e) {
+    console.error(e)
+    throw e
+  }
+}
+
+/**
+ * Retrieve nonce for a given address
+ * 
+ * @param wallet_address - The address to retrieve the nonce for
+ * @param multisig_address - The multisig address for which the wallet address is a signer
+ * 
+ * @returns A promise that resolves with the nonce for the given address
+ */
+export const getNonce = async (wallet_address: string, multisig_address:string): Promise<{
+  nonce: string
+}> => {
+  try {
+    const { data } = await apiClient.get(`nonce`, {
+      params: {
+        wallet_address: wallet_address,
+        multisig_address: multisig_address
+      },
+    })
+
+    return data
+  } catch (e) {
+    console.error(e)
+    throw e
+  }
+}
+
+/**
+ * Test signature
+ * 
+ * @param wallet_address - The address to retrieve the nonce for
+ * @param signature - The signature to test
+ * 
+ * @returns A promise that resolves with the result of the test
+ */
+export const testSignature = async (wallet_address: string, signature: string): Promise<{
+  is_valid: boolean
+}> => {
+  try {
+    const { data } = await apiClient.post(`test-signature`, {
+      wallet_address: wallet_address,
+      signature: signature
+    })
 
     return data
   } catch (e) {

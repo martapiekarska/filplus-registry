@@ -1,9 +1,8 @@
-import Navbar from '@/components/Navbar'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import AuthProvider from '@/components/AuthProvider'
-import ReactQueryProvider from '@/context/ReactQueryProvider'
-import { AllocatorProvider } from '@/lib/AllocatorProvider'
+import { ScaffoldEthAppWithProviders } from '@/components/ScaffoldEthAppWithProviders'
+import { ThemeProvider } from "@/components/ThemeProvider";
+import { getNonce } from '@/lib/apiClient';
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -20,14 +19,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <ReactQueryProvider>
-          <AuthProvider>
-            <AllocatorProvider>
-              <Navbar />
-              {children}
-            </AllocatorProvider>
-          </AuthProvider>
-        </ReactQueryProvider>
+      <ThemeProvider enableSystem>
+        <ScaffoldEthAppWithProviders>
+          {children}
+        </ScaffoldEthAppWithProviders>
+      </ThemeProvider>
       </body>
     </html>
   )
