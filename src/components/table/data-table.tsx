@@ -5,6 +5,8 @@ import {
   flexRender,
   getCoreRowModel,
   useReactTable,
+  getGroupedRowModel,
+  getExpandedRowModel,
 } from '@tanstack/react-table'
 
 import {
@@ -15,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { useState } from 'react'
 
 interface DataTableProps<TData, TValue> {
   columns: Array<ColumnDef<TData, TValue>>
@@ -26,10 +29,24 @@ export function DataTable<TData, TValue>({
   columns,
   data,
 }: DataTableProps<TData, TValue>) {
+  const [grouping, setGrouping] = useState(['repo'])
+  const [rowSelection, setRowSelection] = useState({})
+
   const table = useReactTable({
     data,
     columns,
+    enableRowSelection: true,
+
+    onRowSelectionChange: setRowSelection,
+    onGroupingChange: setGrouping,
+
     getCoreRowModel: getCoreRowModel(),
+    getGroupedRowModel: getGroupedRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
+    state: {
+      grouping,
+      rowSelection,
+    },
   })
 
   return (
@@ -62,7 +79,22 @@ export function DataTable<TData, TValue>({
               >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    {cell.getIsGrouped() ? (
+                      <button
+                        onClick={() => {
+                          console.log('clicked...')
+                          row.getToggleExpandedHandler()
+                        }}
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}{' '}
+                        ({row.subRows.length})
+                      </button>
+                    ) : cell.getIsPlaceholder() ? null : (
+                      flexRender(cell.column.columnDef.cell, cell.getContext())
+                    )}
                   </TableCell>
                 ))}
               </TableRow>
