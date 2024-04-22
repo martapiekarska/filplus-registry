@@ -18,16 +18,17 @@ export const generateColumns = (repoConfig?: {
     {
       accessorKey: 'Issue Number',
       header: 'Issue No.',
-      cell: ({ row }) => (
-        <a
-          href={`https://github.com/${owner ?? row.original.owner}/${repo ?? row.original.repo}/issues/${row.original['Issue Number']}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-500"
-        >
-          {row.original['Issue Number']}
-        </a>
-      ),
+      cell: ({ row }) =>
+        !row.getLeafRows().length ? (
+          <a
+            href={`https://github.com/${owner ?? row.original.owner}/${repo ?? row.original.repo}/issues/${row.original['Issue Number']}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500"
+          >
+            {row.original['Issue Number']}
+          </a>
+        ) : null,
     },
     {
       accessorKey: 'Client.Name',
@@ -60,6 +61,8 @@ export const generateColumns = (repoConfig?: {
             row.original.Lifecycle.State as keyof typeof stateMapping
           ] ?? row.original.Lifecycle.State
 
+        if (row.getLeafRows().length) return null
+
         return (
           <div className="flex items-center">
             <span
@@ -89,28 +92,30 @@ export const generateColumns = (repoConfig?: {
     {
       accessorKey: 'info.core_information.website',
       header: 'Website',
-      cell: ({ row }) => (
-        <a
-          href={row.original.Client.Website}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-500"
-        >
-          {shortenUrl(row.original.Client.Website, 18, 8)}
-        </a>
-      ),
+      cell: ({ row }) =>
+        !row.getLeafRows().length ? (
+          <a
+            href={row.original.Client.Website}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500"
+          >
+            {shortenUrl(row.original.Client.Website, 18, 8)}
+          </a>
+        ) : null,
     },
     {
       id: 'detail',
-      cell: ({ row }) => (
-        <Button asChild className="flex sm:w-4/5 lg:w-2/3 xl:w-3/5 mx-auto">
-          <Link
-            href={`/application/${owner ?? row.original.owner}/${repo ?? row.original.repo}/${row.original.ID}`}
-          >
-            Detail
-          </Link>
-        </Button>
-      ),
+      cell: ({ row }) =>
+        !row.getLeafRows().length ? (
+          <Button asChild className="flex sm:w-4/5 lg:w-2/3 xl:w-3/5 mx-auto">
+            <Link
+              href={`/application/${owner ?? row.original.owner}/${repo ?? row.original.repo}/${row.original.ID}`}
+            >
+              Detail
+            </Link>
+          </Button>
+        ) : null,
     },
   ]
 

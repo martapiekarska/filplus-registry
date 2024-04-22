@@ -18,6 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useState } from 'react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 
 interface DataTableProps<TData, TValue> {
   columns: Array<ColumnDef<TData, TValue>>
@@ -29,17 +30,15 @@ export function DataTable<TData, TValue>({
   columns,
   data,
 }: DataTableProps<TData, TValue>) {
-  const [grouping, setGrouping] = useState(['repo'])
+  const [grouping, setGrouping] = useState(['repo', 'owner'])
   const [rowSelection, setRowSelection] = useState({})
 
   const table = useReactTable({
     data,
     columns,
     enableRowSelection: true,
-
     onRowSelectionChange: setRowSelection,
     onGroupingChange: setGrouping,
-
     getCoreRowModel: getCoreRowModel(),
     getGroupedRowModel: getGroupedRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
@@ -81,11 +80,14 @@ export function DataTable<TData, TValue>({
                   <TableCell key={cell.id}>
                     {cell.getIsGrouped() ? (
                       <button
-                        onClick={() => {
-                          console.log('clicked...')
-                          row.getToggleExpandedHandler()
-                        }}
+                        onClick={row.getToggleExpandedHandler()}
+                        className="flex items-center"
                       >
+                        {row.getIsExpanded() ? (
+                          <ChevronDown size={16} />
+                        ) : (
+                          <ChevronRight size={16} />
+                        )}
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext(),
