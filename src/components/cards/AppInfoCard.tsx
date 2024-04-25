@@ -89,6 +89,9 @@ const AppInfoCard: React.FC<ComponentProps> = ({
   const [currentActorType, setCurrentActorType] = useState<LDNActorType | ''>(
     '',
   )
+
+  const [isProgressBarVisible, setIsProgressBarVisible] = useState(true)
+
   const [isSelectAccountModalOpen, setIsSelectAccountModalOpen] =
     useState(false)
 
@@ -132,8 +135,15 @@ const AppInfoCard: React.FC<ComponentProps> = ({
         const allocationAmount = anyToBytes(
           lastAllocation['Allocation Amount'] ?? '0',
         )
-        const usedDatacap =
-          allocationAmount < allowance ? 0 : allocationAmount - allowance
+
+        if (allocationAmount < allowance) {
+          setIsProgressBarLoading(false)
+          setIsProgressBarVisible(false)
+          return
+        }
+
+        const usedDatacap = allocationAmount - allowance
+
         const progressPercentage = (usedDatacap / allocationAmount) * 100
 
         setProgress(progressPercentage)
@@ -141,7 +151,7 @@ const AppInfoCard: React.FC<ComponentProps> = ({
       } else {
         if (response.error === 'Address not found') {
           setIsProgressBarLoading(false)
-          setProgress(100)
+          setIsProgressBarVisible(false)
         } else {
           console.error(response.error)
         }
@@ -654,7 +664,7 @@ const AppInfoCard: React.FC<ComponentProps> = ({
         </div>
 
         <CardContent>
-          {lastAllocation !== undefined && (
+          {lastAllocation !== undefined && isProgressBarVisible && (
             <ProgressBar
               progress={progress}
               label="Datacap used"
