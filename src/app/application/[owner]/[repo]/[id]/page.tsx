@@ -3,7 +3,12 @@ import AppHistory from '@/components/AppHistory'
 import AppInfoCard from '@/components/cards/AppInfoCard'
 import ProjectInfoCard from '@/components/cards/ProjectInfoCard'
 import { Spinner } from '@/components/ui/spinner'
+import { useAllocator } from '@/lib/AllocatorProvider'
 import { getApplicationByParams } from '@/lib/apiClient'
+import { getAllowanceForAddress } from '@/lib/dmobApi'
+import { bytesToiB } from '@/lib/utils'
+// import { anyToBytes, bytesToiB } from '@/lib/utils'
+import { useEffect, useState } from 'react'
 import { useQuery } from 'react-query'
 
 interface ComponentProps {
@@ -17,11 +22,37 @@ interface ComponentProps {
 const ApplicationDetailPage: React.FC<ComponentProps> = ({
   params: { id, repo, owner },
 }) => {
+  const { allocators } = useAllocator()
+
   const { data, isLoading } = useQuery({
     queryKey: ['posts', id],
     queryFn: async () => await getApplicationByParams(id, repo, owner),
     refetchInterval: 10000,
   })
+
+  const [allowanceMultisig, setAllowanceMultisig] = useState<any>()
+
+  const getAllowance = async (address: string): Promise<void> => {
+    try {
+      const response = await getAllowanceForAddress(address)
+
+      console.log(bytesToiB(parseInt(response.data), true), 'allowance to iB')
+
+      if (response.success) {
+        setAllowanceMultisig(parseInt(response.data))
+      }
+    } catch (error) {
+      console.log(error, 'error in getAllowance')
+    }
+  }
+
+  const multisigAddress = allocators[0]?.multisig_address
+
+  useEffect(() => {
+    if (multisigAddress) {
+      void getAllowance('f2jrkwdnzmmzkgwuhv7bzts474kupilkp5kjfly2a')
+    }
+  }, [multisigAddress])
 
   if (isLoading || !data?.application_file)
     return (
@@ -39,6 +70,7 @@ const ApplicationDetailPage: React.FC<ComponentProps> = ({
             allocation={data.allocation}
             repo={repo}
             owner={owner}
+            allowanceMultisig={allowanceMultisig}
           />
         </div>
         <div className="mb-10">

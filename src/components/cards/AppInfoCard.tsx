@@ -42,6 +42,7 @@ interface ComponentProps {
   repo: string
   owner: string
   allocation?: Allocation
+  allowanceMultisig: any
 }
 
 /**
@@ -59,6 +60,7 @@ const AppInfoCard: React.FC<ComponentProps> = ({
   repo,
   owner,
   allocation,
+  allowanceMultisig,
 }) => {
   const session = useSession()
   const { allocators } = useAllocator()
@@ -448,6 +450,12 @@ const AppInfoCard: React.FC<ComponentProps> = ({
       }))
       return
     }
+
+    if (anyToBytes(allocationAmountConfig.amount) > allowanceMultisig) {
+      toast.error('Amount is bigger than the allowance')
+      return
+    }
+
     setApiCalling(true)
     const userName = session.data?.user?.githubUsername
     if (!userName) return
