@@ -6,7 +6,6 @@ import { Spinner } from '@/components/ui/spinner'
 import { useAllocator } from '@/lib/AllocatorProvider'
 import { getApplicationByParams } from '@/lib/apiClient'
 import { getAllowanceForAddress } from '@/lib/dmobApi'
-import { bytesToiB } from '@/lib/utils'
 // import { anyToBytes, bytesToiB } from '@/lib/utils'
 import { useEffect, useState } from 'react'
 import { useQuery } from 'react-query'
@@ -32,11 +31,11 @@ const ApplicationDetailPage: React.FC<ComponentProps> = ({
 
   const [allowanceMultisig, setAllowanceMultisig] = useState<any>()
 
+  const multisigAddress = allocators[0]?.multisig_address
+
   const getAllowance = async (address: string): Promise<void> => {
     try {
       const response = await getAllowanceForAddress(address)
-
-      console.log(bytesToiB(parseInt(response.data), true), 'allowance to iB')
 
       if (response.success) {
         setAllowanceMultisig(parseInt(response.data))
@@ -46,11 +45,9 @@ const ApplicationDetailPage: React.FC<ComponentProps> = ({
     }
   }
 
-  const multisigAddress = allocators[0]?.multisig_address
-
   useEffect(() => {
     if (multisigAddress) {
-      void getAllowance('f2jrkwdnzmmzkgwuhv7bzts474kupilkp5kjfly2a')
+      void getAllowance(multisigAddress)
     }
   }, [multisigAddress])
 

@@ -117,6 +117,11 @@ const AppInfoCard: React.FC<ComponentProps> = ({
 
   const router = useRouter()
 
+  const allocationRequests = application['Allocation Requests']
+
+  const lastAllocationAmount =
+    allocationRequests[allocationRequests.length - 1]['Allocation Amount']
+
   useEffect(() => {
     setModalMessage(message)
   }, [message])
@@ -348,6 +353,13 @@ const AppInfoCard: React.FC<ComponentProps> = ({
                 }
               })
             } else {
+              // check the balance here
+
+              if (anyToBytes(lastAllocationAmount) > allowanceMultisig) {
+                toast.error('Amount is bigger than the allowance')
+                return
+              }
+
               await mutationProposal.mutateAsync({
                 requestId,
                 userName,
@@ -357,6 +369,13 @@ const AppInfoCard: React.FC<ComponentProps> = ({
           break
         case 'StartSignDatacap':
           if (requestId != null && userName != null) {
+            // check the balance here
+
+            if (anyToBytes(lastAllocationAmount) > allowanceMultisig) {
+              toast.error('Amount is bigger than the allowance')
+              return
+            }
+
             const res = await mutationApproval.mutateAsync({
               requestId,
               userName,
