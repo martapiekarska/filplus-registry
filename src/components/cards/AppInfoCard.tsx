@@ -42,6 +42,7 @@ interface ComponentProps {
   repo: string
   owner: string
   allocation?: Allocation
+  allowanceMultisig: any
 }
 
 /**
@@ -59,6 +60,7 @@ const AppInfoCard: React.FC<ComponentProps> = ({
   repo,
   owner,
   allocation,
+  allowanceMultisig,
 }) => {
   const session = useSession()
   const { allocators } = useAllocator()
@@ -114,6 +116,11 @@ const AppInfoCard: React.FC<ComponentProps> = ({
   })
 
   const router = useRouter()
+
+  const allocationRequests = application['Allocation Requests']
+
+  const lastAllocationAmount =
+    allocationRequests[allocationRequests.length - 1]['Allocation Amount']
 
   useEffect(() => {
     setModalMessage(message)
@@ -346,6 +353,13 @@ const AppInfoCard: React.FC<ComponentProps> = ({
                 }
               })
             } else {
+              // check the balance here
+
+              if (anyToBytes(lastAllocationAmount) > allowanceMultisig) {
+                toast.error('Amount is bigger than the allowance')
+                return
+              }
+
               await mutationProposal.mutateAsync({
                 requestId,
                 userName,
@@ -355,6 +369,13 @@ const AppInfoCard: React.FC<ComponentProps> = ({
           break
         case 'StartSignDatacap':
           if (requestId != null && userName != null) {
+            // check the balance here
+
+            if (anyToBytes(lastAllocationAmount) > allowanceMultisig) {
+              toast.error('Amount is bigger than the allowance')
+              return
+            }
+
             const res = await mutationApproval.mutateAsync({
               requestId,
               userName,
@@ -448,6 +469,12 @@ const AppInfoCard: React.FC<ComponentProps> = ({
       }))
       return
     }
+
+    if (anyToBytes(allocationAmountConfig.amount) > allowanceMultisig) {
+      toast.error('Amount is bigger than the allowance')
+      return
+    }
+
     setApiCalling(true)
     const userName = session.data?.user?.githubUsername
     if (!userName) return
