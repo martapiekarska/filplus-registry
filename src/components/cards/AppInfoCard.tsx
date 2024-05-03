@@ -42,6 +42,7 @@ interface ComponentProps {
   repo: string
   owner: string
   allocation?: Allocation
+  allowanceMultisig: any
 }
 
 /**
@@ -59,6 +60,7 @@ const AppInfoCard: React.FC<ComponentProps> = ({
   repo,
   owner,
   allocation,
+  allowanceMultisig,
 }) => {
   const session = useSession()
   const { allocators } = useAllocator()
@@ -89,6 +91,9 @@ const AppInfoCard: React.FC<ComponentProps> = ({
   const [currentActorType, setCurrentActorType] = useState<LDNActorType | ''>(
     '',
   )
+
+  const [isProgressBarVisible, setIsProgressBarVisible] = useState(true)
+
   const [isSelectAccountModalOpen, setIsSelectAccountModalOpen] =
     useState(false)
 
@@ -112,6 +117,11 @@ const AppInfoCard: React.FC<ComponentProps> = ({
 
   const router = useRouter()
 
+  const allocationRequests = application['Allocation Requests']
+
+  const lastAllocationAmount =
+    allocationRequests[allocationRequests.length - 1]['Allocation Amount']
+
   useEffect(() => {
     setModalMessage(message)
   }, [message])
@@ -132,8 +142,15 @@ const AppInfoCard: React.FC<ComponentProps> = ({
         const allocationAmount = anyToBytes(
           lastAllocation['Allocation Amount'] ?? '0',
         )
-        const usedDatacap =
-          allocationAmount < allowance ? 0 : allocationAmount - allowance
+
+        if (allocationAmount < allowance) {
+          setIsProgressBarLoading(false)
+          setIsProgressBarVisible(false)
+          return
+        }
+
+        const usedDatacap = allocationAmount - allowance
+
         const progressPercentage = (usedDatacap / allocationAmount) * 100
 
         setProgress(progressPercentage)
@@ -141,7 +158,7 @@ const AppInfoCard: React.FC<ComponentProps> = ({
       } else {
         if (response.error === 'Address not found') {
           setIsProgressBarLoading(false)
-          setProgress(100)
+          setIsProgressBarVisible(false)
         } else {
           console.error(response.error)
         }
@@ -336,6 +353,13 @@ const AppInfoCard: React.FC<ComponentProps> = ({
                 }
               })
             } else {
+              // check the balance here
+
+              if (anyToBytes(lastAllocationAmount) > allowanceMultisig) {
+                toast.error('Amount is bigger than the allowance')
+                return
+              }
+
               await mutationProposal.mutateAsync({
                 requestId,
                 userName,
@@ -345,6 +369,13 @@ const AppInfoCard: React.FC<ComponentProps> = ({
           break
         case 'StartSignDatacap':
           if (requestId != null && userName != null) {
+            // check the balance here
+
+            if (anyToBytes(lastAllocationAmount) > allowanceMultisig) {
+              toast.error('Amount is bigger than the allowance')
+              return
+            }
+
             const res = await mutationApproval.mutateAsync({
               requestId,
               userName,
@@ -438,6 +469,12 @@ const AppInfoCard: React.FC<ComponentProps> = ({
       }))
       return
     }
+
+    if (anyToBytes(allocationAmountConfig.amount) > allowanceMultisig) {
+      toast.error('Amount is bigger than the allowance')
+      return
+    }
+
     setApiCalling(true)
     const userName = session.data?.user?.githubUsername
     if (!userName) return
@@ -654,7 +691,7 @@ const AppInfoCard: React.FC<ComponentProps> = ({
         </div>
 
         <CardContent>
-          {lastAllocation !== undefined && (
+          {lastAllocation !== undefined && isProgressBarVisible && (
             <ProgressBar
               progress={progress}
               label="Datacap used"
