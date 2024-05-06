@@ -355,7 +355,10 @@ const AppInfoCard: React.FC<ComponentProps> = ({
             } else {
               // check the balance here
 
-              if (anyToBytes(lastAllocationAmount) > allowanceMultisig) {
+              if (
+                lastAllocationAmount &&
+                anyToBytes(lastAllocationAmount) > allowanceMultisig
+              ) {
                 toast.error('Amount is bigger than the allowance')
                 return
               }
@@ -371,7 +374,10 @@ const AppInfoCard: React.FC<ComponentProps> = ({
           if (requestId != null && userName != null) {
             // check the balance here
 
-            if (anyToBytes(lastAllocationAmount) > allowanceMultisig) {
+            if (
+              lastAllocationAmount &&
+              anyToBytes(lastAllocationAmount) > allowanceMultisig
+            ) {
               toast.error('Amount is bigger than the allowance')
               return
             }
