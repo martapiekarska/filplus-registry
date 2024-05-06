@@ -117,10 +117,12 @@ const AppInfoCard: React.FC<ComponentProps> = ({
 
   const router = useRouter()
 
-  const allocationRequests = application['Allocation Requests']
+  const allocationRequests = application?.['Allocation Requests'] ?? []
 
   const lastAllocationAmount =
-    allocationRequests[allocationRequests.length - 1]['Allocation Amount']
+    allocationRequests?.[allocationRequests.length - 1]?.[
+      'Allocation Amount'
+    ] ?? 0
 
   useEffect(() => {
     setModalMessage(message)
