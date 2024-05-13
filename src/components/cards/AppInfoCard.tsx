@@ -558,7 +558,23 @@ const AppInfoCard: React.FC<ComponentProps> = ({
     datacap: string,
     totalDatacap: string,
   ): string | undefined => {
-    const bytes = anyToBytes(datacap)
+    console.log(datacap, 'datacap')
+
+    // check if data ends with "s" or "S"
+    let datacapWithoutS =
+      datacap.endsWith('s') || datacap.endsWith('S')
+        ? datacap.slice(0, -1)
+        : datacap
+
+    // check if its like "TB OR PB and add "i" between them"
+    const letters = datacapWithoutS.match(/[a-zA-Z]/g)
+
+    if (letters && letters.length === 2) {
+      const lastChar = datacapWithoutS.charAt(datacapWithoutS.length - 1)
+      datacapWithoutS = datacapWithoutS.slice(0, -1) + 'i' + lastChar
+    }
+
+    const bytes = anyToBytes(datacapWithoutS)
     const totalBytes = anyToBytes(totalDatacap)
 
     if (bytes > totalBytes) {
@@ -566,7 +582,7 @@ const AppInfoCard: React.FC<ComponentProps> = ({
       return
     }
 
-    const isBinary = datacap.toLowerCase().includes('ib')
+    const isBinary = datacapWithoutS.toLowerCase().includes('ib')
     const againToText = bytesToiB(bytes, isBinary)
 
     return againToText
