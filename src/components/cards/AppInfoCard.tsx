@@ -466,6 +466,17 @@ const AppInfoCard: React.FC<ComponentProps> = ({
     })
   }
 
+  let totalAllocation = 0
+
+  application['Allocation Requests'].forEach((item) => {
+    const allocationAmount = anyToBytes(item['Allocation Amount'])
+
+    totalAllocation += allocationAmount
+  })
+
+  const remaining =
+    anyToBytes(application.Datacap['Total Requested Amount']) - totalAllocation
+
   const handleAllocationAmountClose = async (
     shouldSubmit: boolean,
   ): Promise<void> => {
@@ -480,6 +491,11 @@ const AppInfoCard: React.FC<ComponentProps> = ({
 
     if (anyToBytes(allocationAmountConfig.amount) > allowanceMultisig) {
       toast.error('Amount is bigger than the allowance')
+      return
+    }
+
+    if (anyToBytes(allocationAmountConfig.amount) > remaining) {
+      toast.error('Amount is bigger than remaning')
       return
     }
 
