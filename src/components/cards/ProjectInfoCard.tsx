@@ -11,7 +11,7 @@ const ProjectInfoCard: React.FC<ProjectInfoCardProps> = ({ application }) => {
   const [isExpanded, setIsExpanded] = useState(false)
 
   const project = application.Project
-  const { 'Project Id': projectId, ...projectDetails } = project
+  const { ...projectDetails } = project
 
   const getRowStyles = (index: number): string => {
     return index % 2 === 0 ? 'bg-white' : 'bg-gray-100'
