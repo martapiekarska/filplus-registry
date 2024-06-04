@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/modal'
 import ProgressBar from '@/components/ui/progress-bar'
 import { Spinner } from '@/components/ui/spinner'
 import { config } from '@/config'
+import calculateAmountToRequest from '@/helpers/calculateAmountToRefill'
 import useApplicationActions from '@/hooks/useApplicationActions'
 import { useAllocator } from '@/lib/AllocatorProvider'
 import { stateColor, stateMapping } from '@/lib/constants'
@@ -15,7 +16,12 @@ import {
   calculateDatacap,
   getLastDatacapAllocation,
 } from '@/lib/utils'
-import { LDNActorType, type Allocation, type Application } from '@/type'
+import {
+  LDNActorType,
+  type Allocation,
+  type Application,
+  RefillUnit,
+} from '@/type'
 import {
   Dialog,
   DialogActions,
@@ -32,6 +38,7 @@ import Radio from '@mui/material/Radio'
 import RadioGroup from '@mui/material/RadioGroup'
 import Select, { type SelectChangeEvent } from '@mui/material/Select'
 import TextField from '@mui/material/TextField'
+import axios from 'axios'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -71,6 +78,7 @@ const AppInfoCard: React.FC<ComponentProps> = ({
     mutationDecline,
     mutationRequestInfo,
     mutationTrigger,
+    mutationTriggerSSA,
     mutationApproveChanges,
     mutationProposal,
     mutationApproval,
@@ -96,6 +104,16 @@ const AppInfoCard: React.FC<ComponentProps> = ({
 
   const [isSelectAccountModalOpen, setIsSelectAccountModalOpen] =
     useState(false)
+
+  const [refillInfoParams, setRefillInfoParams] = useState<{
+    amount: string
+    unit: RefillUnit
+    isDialogOpen: boolean
+  }>({
+    amount: '0',
+    unit: RefillUnit.GIB,
+    isDialogOpen: false,
+  })
 
   const [additionalInfoConfig, setAdditionalInfoConfig] = useState<{
     message: string
@@ -133,9 +151,15 @@ const AppInfoCard: React.FC<ComponentProps> = ({
    */
   useEffect(() => {
     void (async (): Promise<void> => {
+      const { amount, amountType } = calculateAmountToRequest(application)
+
+      setRefillInfoParams({
+        amount: amount.toString(),
+        unit: amountType,
+        isDialogOpen: false,
+      })
       const address = application.Lifecycle['On Chain Address']
       const response = await getAllowanceForAddress(address)
-
       if (response.success) {
         const allowance = parseFloat(response.data)
         const lastAllocation = getLastDatacapAllocation(application)
@@ -158,9 +182,13 @@ const AppInfoCard: React.FC<ComponentProps> = ({
         setProgress(progressPercentage)
         setIsProgressBarLoading(false)
       } else {
+        setIsProgressBarLoading(false)
+
         if (response.error === 'Address not found') {
-          setIsProgressBarLoading(false)
-          setIsProgressBarVisible(false)
+          setIsProgressBarVisible(application.Lifecycle.State === 'Granted')
+          if (application.Lifecycle.State === 'Granted') {
+            setProgress(100)
+          }
         } else {
           console.error(response.error)
         }
@@ -209,6 +237,17 @@ const AppInfoCard: React.FC<ComponentProps> = ({
     ) {
       setWalletConnected(false)
     }
+  }
+
+  const handleSSAError = (error: unknown): void => {
+    let message = 'An unknown error occurred'
+    if (axios.isAxiosError(error) && error.response?.data) {
+      message = error.response.data
+    } else if (error instanceof Error) {
+      message = error.message
+    }
+    setModalMessage(message)
+    setError(true)
   }
 
   /**
@@ -537,6 +576,27 @@ const AppInfoCard: React.FC<ComponentProps> = ({
 
     setApiCalling(false)
   }
+  const handleSSASubmit = async (): Promise<void> => {
+    setApiCalling(true)
+    const userName = session.data?.user?.githubUsername
+    if (!userName) return
+
+    try {
+      await mutationTriggerSSA.mutateAsync({
+        userName,
+        amount: refillInfoParams.amount,
+        unit: refillInfoParams.unit,
+      })
+    } catch (err) {
+      handleSSAError(err)
+    } finally {
+      setApiCalling(false)
+    }
+    setRefillInfoParams((prev) => ({
+      ...prev,
+      isDialogOpen: false,
+    }))
+  }
 
   useEffect(() => {
     // if not the first allocation, prefill the amount with ssa bot suggested value
@@ -561,8 +621,6 @@ const AppInfoCard: React.FC<ComponentProps> = ({
   const stateClass =
     stateColor[application.Lifecycle.State as keyof typeof stateColor] ??
     application.Lifecycle.State
-
-  const lastAllocation = getLastDatacapAllocation(application)
 
   const getRowStyles = (index: number): string => {
     return index % 2 === 0
@@ -731,7 +789,7 @@ const AppInfoCard: React.FC<ComponentProps> = ({
         </div>
 
         <CardContent>
-          {lastAllocation !== undefined && isProgressBarVisible && (
+          {isProgressBarVisible && (
             <ProgressBar
               progress={progress}
               label="Datacap used"
@@ -739,105 +797,219 @@ const AppInfoCard: React.FC<ComponentProps> = ({
             />
           )}
         </CardContent>
-
-        {LDNActorType.Verifier === currentActorType ? (
-          <div>
-            {application?.Lifecycle?.State !== 'Granted' &&
-              session?.data?.user?.name !== undefined && (
-                <CardFooter className="flex flex-col items-end border-t pt-4 pb-2 mt-4 justify-center gap-3">
-                  {buttonText &&
-                    (walletConnected ||
-                      [
-                        'Submitted',
-                        'AdditionalInfoRequired',
-                        'AdditionalInfoSubmitted',
-                        'ChangesRequested',
-                      ].includes(application?.Lifecycle?.State)) && (
-                      <div className="flex justify-end gap-2 pb-4">
-                        {[
+        <div>
+          <CardFooter className="flex flex-col items-end border-t pt-4 pb-2 mt-4 justify-center gap-3">
+            <div className="flex justify-end gap-2 pb-4">
+              {LDNActorType.Verifier === currentActorType ? (
+                session?.data?.user?.name !== undefined &&
+                application?.Lifecycle?.State !== 'Granted' ? (
+                  <>
+                    {buttonText &&
+                      (walletConnected ||
+                        [
                           'Submitted',
                           'AdditionalInfoRequired',
                           'AdditionalInfoSubmitted',
-                        ].includes(application?.Lifecycle?.State) && (
-                          <div className="flex gap-2">
-                            <Button
-                              onClick={() => {
-                                setAdditionalInfoConfig({
-                                  isDialogOpen: true,
-                                  message: '',
-                                })
-                              }}
-                              disabled={isApiCalling}
-                              style={{
-                                width: '200px',
-                              }}
-                              className="bg-yellow-400 text-black rounded-lg px-4 py-2 hover:bg-yellow-500"
-                            >
-                              Request Additional Info
-                            </Button>
-                            <Button
-                              onClick={() => {
-                                void declineApplication()
-                              }}
-                              disabled={isApiCalling}
-                              style={{
-                                width: '200px',
-                              }}
-                              className="bg-red-400 text-white rounded-lg px-4 py-2 hover:bg-red-600"
-                            >
-                              Decline Application
-                            </Button>
-                          </div>
-                        )}
-                        <Button
-                          onClick={() => {
-                            void handleButtonClick()
-                          }}
-                          disabled={isApiCalling}
-                          style={{
-                            width: '200px',
-                          }}
-                          className="bg-blue-400 text-white rounded-lg px-4 py-2 hover:bg-blue-500"
-                        >
-                          {buttonText}
-                        </Button>
-                      </div>
-                    )}
+                          'ChangesRequested',
+                        ].includes(application?.Lifecycle?.State)) && (
+                        <>
+                          {[
+                            'Submitted',
+                            'AdditionalInfoRequired',
+                            'AdditionalInfoSubmitted',
+                          ].includes(application?.Lifecycle?.State) && (
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={() => {
+                                  setAdditionalInfoConfig({
+                                    isDialogOpen: true,
+                                    message: '',
+                                  })
+                                }}
+                                disabled={isApiCalling}
+                                style={{
+                                  width: '200px',
+                                }}
+                                className="bg-yellow-400 text-black rounded-lg px-4 py-2 hover:bg-yellow-500"
+                              >
+                                Request Additional Info
+                              </Button>
+                              <Button
+                                onClick={() => {
+                                  void declineApplication()
+                                }}
+                                disabled={isApiCalling}
+                                style={{
+                                  width: '200px',
+                                }}
+                                className="bg-red-400 text-white rounded-lg px-4 py-2 hover:bg-red-600"
+                              >
+                                Decline Application
+                              </Button>
+                            </div>
+                          )}
+                          <Button
+                            onClick={() => void handleButtonClick()}
+                            disabled={isApiCalling}
+                            style={{
+                              width: '200px',
+                            }}
+                            className="bg-blue-400 text-white rounded-lg px-4 py-2 hover:bg-blue-500"
+                          >
+                            {buttonText}
+                          </Button>
+                        </>
+                      )}
 
-                  {!walletConnected &&
-                    currentActorType === LDNActorType.Verifier &&
-                    ![
-                      'Submitted',
-                      'ChangesRequested',
-                      'AdditionalInfoRequired',
-                      'AdditionalInfoSubmitted',
-                    ].includes(application?.Lifecycle?.State) && (
-                      <Button
-                        onClick={() => {
-                          void handleConnectLedger()
-                        }}
-                        disabled={
-                          isWalletConnecting ||
-                          isApiCalling ||
-                          ['Granted', 'Submitted'].includes(
-                            application.Lifecycle.State,
-                          )
-                        }
-                        className="bg-blue-500 text-white rounded-lg px-4 py-2 hover:bg-blue-600"
-                      >
-                        Connect Ledger
-                      </Button>
-                    )}
+                    {!walletConnected &&
+                      currentActorType === LDNActorType.Verifier &&
+                      ![
+                        'Submitted',
+                        'ChangesRequested',
+                        'AdditionalInfoRequired',
+                        'AdditionalInfoSubmitted',
+                      ].includes(application?.Lifecycle?.State) && (
+                        <Button
+                          onClick={() => void handleConnectLedger()}
+                          disabled={
+                            isWalletConnecting ||
+                            isApiCalling ||
+                            ['Granted', 'Submitted'].includes(
+                              application.Lifecycle.State,
+                            )
+                          }
+                          className="bg-blue-500 text-white rounded-lg px-4 py-2 hover:bg-blue-600"
+                        >
+                          Connect Ledger
+                        </Button>
+                      )}
+                  </>
+                ) : (
+                  progress > 75 &&
+                  remaining > 0 && (
+                    <Button
+                      disabled={isApiCalling}
+                      onClick={() => {
+                        setRefillInfoParams((prev) => ({
+                          amount: prev.amount || '1',
+                          unit: prev.unit || RefillUnit.GIB,
+                          isDialogOpen: true,
+                        }))
+                      }}
+                    >
+                      Trigger Refill
+                    </Button>
+                  )
+                )
+              ) : (
+                <CardFooter className="px-6 flex justify-end items-center w-full font-semibold text-xl italic">
+                  You must be a verifier in order to perform actions on the
+                  application.
                 </CardFooter>
               )}
-          </div>
-        ) : (
-          <CardFooter className="px-6 flex justify-end items-center w-full font-semibold text-xl italic">
-            You must be a verifier in order to perform actions on the
-            application.
+            </div>
           </CardFooter>
-        )}
+        </div>
       </Card>
+      <Dialog
+        open={refillInfoParams.isDialogOpen}
+        onClose={() => {
+          setRefillInfoParams((prev) => ({
+            ...prev,
+            isDialogOpen: false,
+          }))
+        }}
+        fullWidth
+      >
+        <DialogTitle>Datacap Refill Request</DialogTitle>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            void handleSSASubmit()
+          }}
+        >
+          <DialogContent
+            style={{
+              paddingTop: '8px',
+            }}
+          >
+            {(isApiCalling || isWalletConnecting) && (
+              <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
+                <Spinner />
+              </div>
+            )}
+            <div className="flex gap-3 items-center">
+              <div>
+                <Box sx={{ width: 230 }}>
+                  <FormControl fullWidth>
+                    <TextField
+                      label="Amount"
+                      id="outlined-number"
+                      type="number"
+                      InputProps={{
+                        inputProps: { min: 1 },
+                      }}
+                      value={refillInfoParams.amount}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        setRefillInfoParams((prev) => ({
+                          ...prev,
+                          amount: e.target.value,
+                        }))
+                      }}
+                      variant="outlined"
+                      required
+                    />
+                  </FormControl>
+                </Box>
+              </div>
+              <div>
+                <Box sx={{ width: 230 }}>
+                  <FormControl fullWidth>
+                    <InputLabel>Unit</InputLabel>
+                    <Select
+                      value={refillInfoParams.unit}
+                      label="Unit"
+                      onChange={(e: SelectChangeEvent) => {
+                        setRefillInfoParams((prev) => ({
+                          ...prev,
+                          unit: e.target.value as RefillUnit,
+                        }))
+                      }}
+                    >
+                      {Object.values(RefillUnit).map((e) => (
+                        <MenuItem key={e} value={e}>
+                          {e}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Box>
+              </div>
+            </div>
+          </DialogContent>
+          <DialogActions
+            style={{
+              padding: '0 24px 20px 24px',
+            }}
+          >
+            <Button
+              type="button"
+              disabled={isApiCalling}
+              onClick={() => {
+                setRefillInfoParams((prev) => ({
+                  ...prev,
+                  isDialogOpen: false,
+                }))
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isApiCalling}>
+              Submit
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
       <Dialog
         open={additionalInfoConfig.isDialogOpen}
         onClose={() => {
